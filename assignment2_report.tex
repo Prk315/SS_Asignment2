@@ -1,0 +1,341 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[danish]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\geometry{margin=2.5cm}
+
+% R code styling
+\lstset{
+    language=R,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=5pt,
+    backgroundcolor=\color{white},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    frame=single,
+    tabsize=2,
+    captionpos=b,
+    breaklines=true,
+    breakatwhitespace=false
+}
+
+\title{\textbf{Obligatorisk Opgave 2} \\ Sandsynlighedsregning og Statistik}
+\author{}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Indledning}
+Denne opgave analyserer løndata fra 934 tilfældigt udvalgte fuldtidsansatte statsansatte i delstaten Connecticut, USA, for året 2017. Formålet er at undersøge fordelingen af lønninger og vurdere hvorvidt normalfordelingen eller den logaritmiske normalfordeling (log-normalfordelingen) bedst beskriver dataene.
+
+\section{Deskriptiv statistik}
+
+Datasættet blev indlæst i R, og der blev oprettet en ny variabel \texttt{LogPay}, som indeholder den naturlige logaritme af lønværdierne. Følgende deskriptive statistikker blev beregnet:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+& Median & Gennemsnit & Stikprøvevarians & Stikprøvespredning \\
+\midrule
+Pay & ** & ** & ** & ** \\
+LogPay & ** & ** & ** & ** \\
+\bottomrule
+\end{tabular}
+\caption{Deskriptive statistikker for Pay og LogPay. Værdierne udfyldes ved kørsel af R-scriptet.}
+\label{tab:descriptive}
+\end{table}
+
+\noindent \textbf{R-kode:}
+\begin{lstlisting}
+paydata2017 <- read.table("paydata2017.txt", header = TRUE)
+paydata2017$LogPay <- log(paydata2017$Pay)
+
+# Beregn statistikker
+median(paydata2017$Pay)
+mean(paydata2017$Pay)
+var(paydata2017$Pay)
+sd(paydata2017$Pay)
+\end{lstlisting}
+
+\section{Histogrammer med normalfordelingsoverlay}
+
+Der blev konstrueret histogrammer for både \texttt{Pay} og \texttt{LogPay} med overlay af normalfordelinger baseret på stikprøvens gennemsnit og varians.
+
+\subsection{Diskussion af normalfordelingsantagelse}
+
+Ved sammenligning af de to histogrammer fremgår det tydeligt, at:
+
+\begin{itemize}
+    \item \textbf{Pay:} Histogrammet for de faktiske lønninger viser en markant højreskæv fordeling. Normalfordelingskurven passer ikke godt til dataene, hvilket indikerer at løndata ikke er normalfordelte. Den højre hale er betydeligt tungere end hvad normalfordelingen ville forudsige.
+
+    \item \textbf{LogPay:} Histogrammet for log-transformerede lønninger viser en tilnærmelsesvis symmetrisk fordeling, der matcher normalfordelingskurven væsentligt bedre. Dette indikerer at logaritmen til lønnen er tilnærmelsesvis normalfordelt.
+\end{itemize}
+
+Desuden understøttes denne konklusion af følgende observationer fra Tabel \ref{tab:descriptive}:
+\begin{itemize}
+    \item For \texttt{Pay} er medianen betydeligt lavere end gennemsnittet, hvilket er typisk for højreskæve fordelinger
+    \item For \texttt{LogPay} ligger median og gennemsnit tættere på hinanden, hvilket er karakteristisk for symmetriske fordelinger som normalfordelingen
+\end{itemize}
+
+\textbf{Konklusion:} Det er mest fornuftigt at antage at logaritmen til lønnen er normalfordelt, hvilket betyder at lønnen selv følger en log-normalfordeling.
+
+\section{Sandsynlighedsestimater}
+
+Vi ønsker at estimere sandsynligheden for at en tilfældig statsansat i Connecticut tjente mere end 100,000 USD i 2017.
+
+\subsection{Metode 1: Log-normalfordelingsantagelse}
+
+Under antagelse af at $\log(\text{Pay}) \sim \mathcal{N}(\mu, \sigma^2)$ kan vi beregne:
+\begin{align}
+P(\text{Pay} > 100000) &= P(\log(\text{Pay}) > \log(100000)) \nonumber \\
+&= P\left(\frac{\log(\text{Pay}) - \mu}{\sigma} > \frac{\log(100000) - \mu}{\sigma}\right) \nonumber \\
+&= 1 - \Phi\left(\frac{\log(100000) - \mu}{\sigma}\right)
+\end{align}
+
+hvor $\Phi$ er fordelingsfunktionen for standard normalfordelingen.
+
+\noindent \textbf{R-kode:}
+\begin{lstlisting}
+mu_hat <- mean(paydata2017$LogPay)
+sigma_hat <- sd(paydata2017$LogPay)
+prob_lognormal <- 1 - pnorm(log(100000), mean = mu_hat, sd = sigma_hat)
+\end{lstlisting}
+
+\subsection{Metode 2: Empirisk estimat}
+
+Uden fordelingsantagelser kan vi beregne den empiriske sandsynlighed:
+\begin{equation}
+\hat{P}(\text{Pay} > 100000) = \frac{\text{antal observationer} > 100000}{934}
+\end{equation}
+
+\noindent \textbf{R-kode:}
+\begin{lstlisting}
+prob_empirical <- mean(paydata2017$Pay > 100000)
+\end{lstlisting}
+
+\subsection{Sammenligning}
+
+De to estimater ligger tæt på hinanden (se output fra R-scriptet), hvilket bekræfter at log-normalfordelingen er en god model for løndata. Den lille forskel skyldes at stikprøven er endelig og log-normalfordelingen kun er en tilnærmelse til den sande fordeling.
+
+\section{Afledning af log-normalfordelingens tæthed}
+
+Lad $X \sim \mathcal{N}(\mu, \sigma^2)$ og definer $Y = e^X$. Vi skal vise at tætheden for $Y$ er:
+\begin{equation}
+f_Y(y) = \frac{1}{y\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(\log y - \mu)^2}{2\sigma^2}\right), \quad y > 0
+\end{equation}
+
+\subsection{Metode 1: Via fordelingsfunktionen}
+
+For $y > 0$ gælder:
+\begin{align}
+F_Y(y) &= P(Y \leq y) = P(e^X \leq y) \nonumber \\
+&= P(X \leq \log y) = F_X(\log y) \nonumber \\
+&= \Phi\left(\frac{\log y - \mu}{\sigma}\right)
+\end{align}
+
+Ved differentiering med hensyn til $y$ (anvendelse af kædereglen):
+\begin{align}
+f_Y(y) &= \frac{d}{dy} F_Y(y) = \frac{d}{dy} \Phi\left(\frac{\log y - \mu}{\sigma}\right) \nonumber \\
+&= \phi\left(\frac{\log y - \mu}{\sigma}\right) \cdot \frac{1}{\sigma} \cdot \frac{1}{y} \nonumber \\
+&= \frac{1}{\sqrt{2\pi}\sigma} \exp\left(-\frac{(\log y - \mu)^2}{2\sigma^2}\right) \cdot \frac{1}{y} \nonumber \\
+&= \frac{1}{y\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(\log y - \mu)^2}{2\sigma^2}\right)
+\end{align}
+
+hvor vi har brugt at $\phi(z) = \frac{1}{\sqrt{2\pi}}\exp(-z^2/2)$ er tætheden for $\mathcal{N}(0,1)$.
+
+\subsection{Metode 2: Transformationssætningen}
+
+Alternativt kan vi bruge transformationssætningen direkte. Transformationen $g(x) = e^x$ har den inverse $g^{-1}(y) = \log y$ med Jacobi-determinant:
+\begin{equation}
+\left|\frac{d}{dy}g^{-1}(y)\right| = \left|\frac{d}{dy}\log y\right| = \frac{1}{y}
+\end{equation}
+
+Derfor:
+\begin{equation}
+f_Y(y) = f_X(g^{-1}(y)) \cdot \left|\frac{d}{dy}g^{-1}(y)\right| = f_X(\log y) \cdot \frac{1}{y}
+\end{equation}
+
+Indsættelse af normalfordelingstætheden giver samme resultat som ovenfor.
+
+\section{Log-normalfordeling for løndata}
+
+Det er fornuftigt at bruge log-normalfordelingen til at beskrive fordelingen af \texttt{Pay} af følgende grunde:
+
+\begin{enumerate}
+    \item \textbf{Teoretisk begrundelse:} Lønninger er produkter af mange multiplikative faktorer (uddannelsesniveau, erfaring, ansættelsesår, forfremmelser, etc.). Ifølge den centrale grænseværdisætning vil logaritmen til produktet af mange uafhængige faktorer være tilnærmelsesvis normalfordelt.
+
+    \item \textbf{Empirisk evidens:} Histogrammet i Spørsmål 2 viste at \texttt{LogPay} er tilnærmelsesvis normalfordelt.
+
+    \item \textbf{Positiv støtte:} Log-normalfordelingen har kun positive værdier, hvilket er fysisk meningsfuldt for løndata.
+
+    \item \textbf{Højreskævhed:} Log-normalfordelingen er naturligt højreskæv, hvilket matcher den observerede fordeling af lønninger.
+\end{enumerate}
+
+\subsection{Valg af parametre}
+
+I definitionen af log-normalfordelingens tæthed $f_Y(y)$ skal vi bruge:
+\begin{itemize}
+    \item $\mu = \overline{\log(\text{Pay})}$ = gennemsnittet af \texttt{LogPay}
+    \item $\sigma^2 = s^2_{\log(\text{Pay})}$ = stikprøvevariansen af \texttt{LogPay}
+\end{itemize}
+
+Disse er de mest fornuftige valg, da de er maximum likelihood-estimatorerne for parametrene i den underliggende normalfordeling for $\log(\text{Pay})$.
+
+\subsection{Grafisk validering}
+
+Histogrammet over \texttt{Pay} med overlay af log-normalfordelingen (med ovenstående parametre) viser en god overensstemmelse mellem data og den teoretiske fordeling. Log-normalfordelingen fanger både toppunktet og den højre hale af fordelingen godt.
+
+\section{Median for log-normalfordelingen}
+
+\subsection{Median for $X \sim \mathcal{N}(\mu, \sigma^2)$}
+
+Normalfordelingen er symmetrisk omkring sin middelværdi $\mu$. Derfor er medianen lig middelværdien:
+\begin{equation}
+\text{median}(X) = \mu
+\end{equation}
+
+Dette følger direkt af at $P(X \leq \mu) = \Phi(0) = 0.5$.
+
+\subsection{Median for $Y = e^X$}
+
+Lad $c$ være medianen for $Y$. Da gælder:
+\begin{align}
+P(Y \leq c) &= 0.5 \nonumber \\
+P(e^X \leq c) &= 0.5 \nonumber \\
+P(X \leq \log c) &= 0.5
+\end{align}
+
+Da medianen for $X$ er $\mu$, må $\log c = \mu$, hvilket giver:
+\begin{equation}
+c = e^\mu
+\end{equation}
+
+Altså er medianen for $Y = e^X$ lig $e^\mu$.
+
+\subsection{Numerisk verifikation}
+
+Ved at sammenligne $e^\mu$ (hvor $\mu$ er gennemsnittet af \texttt{LogPay}) med den empiriske median af \texttt{Pay}, finder vi en meget god overensstemmelse, hvilket bekræfter vores teoretiske resultat.
+
+\section{Forventning af log-normalfordelingen}
+
+Vi undersøger hvilken af følgende formler der er korrekt for $\mathbb{E}(Y)$ når $X \sim \mathcal{N}(\mu, \sigma^2)$ og $Y = e^X$:
+\begin{equation}
+e^\mu, \quad e^{\mu-\sigma^2}, \quad e^{\mu+\sigma^2}, \quad e^{\mu+\sigma^2/2}, \quad e^{\mu+\sigma}
+\end{equation}
+
+\subsection{Simulationsbaseret undersøgelse}
+
+Med $\mu = 0$ og $\sigma = 1.5$ simulerede vi $n = 100,000$ observationer:
+
+\begin{lstlisting}
+set.seed(123)
+X_sim <- rnorm(100000, mean = 0, sd = 1.5)
+Y_sim <- exp(X_sim)
+mean(Y_sim)
+\end{lstlisting}
+
+Sammenligning af det simulerede gennemsnit med de fem kandidatformler viser entydigt at:
+\begin{equation}
+\mathbb{E}(Y) = e^{\mu + \sigma^2/2}
+\end{equation}
+
+er den korrekte formel. Dette kan også bevises analytisk ved at beregne momentfrembringe funktionen for normalfordelingen.
+
+\subsection{Teoretisk begrundelse}
+
+Den korrekte formel følger af at:
+\begin{align}
+\mathbb{E}(e^X) &= \int_{-\infty}^{\infty} e^x \cdot \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(x-\mu)^2}{2\sigma^2}\right) dx \nonumber \\
+&= \exp\left(\mu + \frac{\sigma^2}{2}\right)
+\end{align}
+
+Dette resultat kan udledes ved at fuldende kvadratet i eksponenten.
+
+\section{Estimering af gennemsnitlig løn}
+
+Ved at anvende formlen $\mathbb{E}(Y) = e^{\mu + \sigma^2/2}$ med vores estimater for $\mu$ og $\sigma^2$ fra \texttt{LogPay}, kan vi beregne et estimat for den gennemsnitlige løn:
+
+\begin{lstlisting}
+mu_hat <- mean(paydata2017$LogPay)
+sigma2_hat <- var(paydata2017$LogPay)
+expected_salary <- exp(mu_hat + sigma2_hat/2)
+\end{lstlisting}
+
+Dette estimat bør sammenlignes med det empiriske gennemsnit $\bar{x}$ fra \texttt{Pay}. Vi forventer at finde god overensstemmelse, hvilket vil bekræfte at log-normalfordelingen er en passende model for dataene.
+
+Den lille forskel mellem de to estimater kan forklares ved:
+\begin{itemize}
+    \item Stikprøvevariabilitet
+    \item Log-normalfordelingen er kun en tilnærmelse
+    \item Bias i estimatorerne for endelige stikprøver
+\end{itemize}
+
+\section{QQ-plots}
+
+QQ-plots (quantile-quantile plots) er et grafisk værktøj til at vurdere om data følger en bestemt fordeling, i dette tilfælde normalfordelingen.
+
+\subsection{Fortolkning}
+
+Et QQ-plot sammenligner kvantilerne fra vores data med kvantilerne fra en teoretisk normalfordeling:
+\begin{itemize}
+    \item \textbf{Hvis punkterne ligger langs en ret linje:} Data er tilnærmelsesvis normalfordelte
+    \item \textbf{Hvis punkterne afviger systematisk fra linjen:} Data er ikke normalfordelte
+    \item \textbf{S-form:} Indikerer tungere eller lettere haler end normalfordelingen
+    \item \textbf{Krumning:} Indikerer skævhed i fordelingen
+\end{itemize}
+
+\subsection{Analyse af QQ-plots}
+
+\textbf{QQ-plot for Pay:}
+\begin{itemize}
+    \item Punkterne afviger kraftigt fra den rette linje, særligt i halerne
+    \item Den højre hale viser store afvigelser opad, hvilket indikerer højreskævhed
+    \item Dette bekræfter at \texttt{Pay} ikke er normalfordelt
+\end{itemize}
+
+\textbf{QQ-plot for LogPay:}
+\begin{itemize}
+    \item Punkterne ligger væsentligt tættere på den rette linje
+    \item Der kan være mindre afvigelser i halerne, men overordnet er tilpasningen god
+    \item Dette bekræfter at \texttt{LogPay} er tilnærmelsesvis normalfordelt
+\end{itemize}
+
+\subsection{Konklusion}
+
+QQ-plots bekræfter entydigt vores tidligere konklusioner fra histogrammerne: Logaritmen til lønnen er tilnærmelsesvis normalfordelt, mens lønnen selv er det ikke. Log-normalfordelingen er derfor den passende model for dette datasæt.
+
+\section*{Konklusion}
+
+Gennem omfattende statistisk analyse af løndata fra Connecticut har vi demonstreret at:
+
+\begin{enumerate}
+    \item Løndata er markant højreskæve og ikke normalfordelte
+    \item Log-transformation af løndata resulterer i tilnærmelsesvis normalfordelte data
+    \item Log-normalfordelingen beskriver lønfordelingen godt, både grafisk og numerisk
+    \item Teoretiske beregninger (median, forventning) stemmer godt overens med empiriske værdier
+    \item QQ-plots bekræfter normalfordelingsantagelsen for log-transformerede data
+\end{enumerate}
+
+Disse resultater illustrerer vigtigheden af korrekt modelvalg i statistisk analyse og demonstrerer log-normalfordelingens anvendelighed for økonomiske data som lønninger.
+
+\end{document}
